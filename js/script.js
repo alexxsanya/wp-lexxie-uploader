@@ -16,7 +16,10 @@
             formData.append('async-upload', $imgFile[0].files[0]);
             formData.append('name', $imgFile[0].files[0].name);
             formData.append('_wpnonce', sa_config.nonce);
-        
+
+            //validating image file before uploading it
+            ImagefileValidation($imgFile[0]);
+
             $.ajax({
                 url: sa_config.upload_url,
                 data: formData,
@@ -101,3 +104,80 @@
 
     });
 })(jQuery);
+
+
+const ImagefileValidation = (file) => {
+        
+    /*
+        Implemented this method based on 
+        https://stackoverflow.com/questions/18299806/how-to-check-file-mime-type-with-javascript-before-upload
+        File signature ref -> https://en.wikipedia.org/wiki/List_of_file_signatures
+    */
+
+    messages = {
+        'size': 'Image file exceeds acceptable file size of 300Kb',
+        'unknown': 'File selected is not a valid photo file'
+    }
+
+    //file => file[0]
+    const fileSize = file.files[0].size;
+
+    if ( fileSize > 3 * 1024 ){
+        alert(messages['size'])
+        return false;
+    }
+
+    if (window.FileReader && window.Blob) {
+        // All the File APIs are supported.
+        blob = file.files[0];
+        // This validates that the image is of an acceptable file type
+        getBLOBFileHeader(blob);
+        
+    } else {
+        // File and Blob are not supported
+        alert('Blob not supported')
+    }
+}
+
+const mimeType =(headerString) => {
+    switch (headerString) {
+      case "89504e47":
+        type = "image/png";
+        break;
+      case "47494638":
+        type = "image/gif";
+        break;
+      case "ffd8ffe0":
+      case "ffd8ffe1":
+      case "ffd8ffe2":
+        type = "image/jpeg";
+        break;
+      default:
+        type = "unknown";
+        break;
+    }
+    return type;
+  }
+
+// Return the first few bytes of the file as a hex string
+const getBLOBFileHeader = (blob) =>  {
+    var fileReader = new FileReader();
+    fileReader.onloadend = function(e) {
+      var arr = (new Uint8Array(e.target.result)).subarray(0, 4);
+      var header = "";
+      for (var i = 0; i < arr.length; i++) {
+        header += arr[i].toString(16);
+      }
+       //check the header against the acceptable headers
+       type = mimeType(header)
+
+       if (type == 'unknown') {
+           alert(messages['unknown'])
+           return false;
+       }else {
+           return true
+       }
+       
+    };
+    fileReader.readAsArrayBuffer(blob);
+  }
